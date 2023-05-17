@@ -1,0 +1,39 @@
+;Turn on the upper LED when the JOYSTICK is pressed.
+; Task1.asm
+
+
+; Load addresses of (I/O) registers
+.include "m328pdef.inc"
+
+   
+; Boot code, microcrontroller starts at address 0x0000
+.org 0x0000
+rjmp init
+
+
+init:
+; Configure input pin PB2
+CBI DDRB,2 ;  PB2 is an input pin
+SBI PORTB,2 ; Enable the pull up resistor
+
+; Configure output pin PC2
+SBI DDRC,2 ; PC2 is an output pin
+SBI PORTC,2 ;  Output Vcc => LED is turned off!
+rjmp main
+
+
+main:
+IN R0,PINB	; Get value of PINB
+BST R0,2	; Copy PB2 (bit 2 of PINB) to the T flag
+		
+; The joystick is pressed if the T flag is cleared		
+BRTC JoyPressed  ; Branch if the T flag is cleared
+		
+
+JoyNotPressed:
+	SBI PORTC,2 ; Set LED off
+	rjmp main
+
+JoyPressed:
+	CBI PORTC,2 ; Set LED on
+	rjmp main

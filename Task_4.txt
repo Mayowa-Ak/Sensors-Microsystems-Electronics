@@ -1,0 +1,49 @@
+;Sound the buzzer at an audible frequency
+; Task 4
+
+
+; Load addresses of (I/O) registers
+.include "m328pdef.inc"
+
+; Boot code, microcrontroller starts at address 0x0000
+.org 0x0000
+	rjmp init
+
+;configure output 
+init:
+		SBI DDRB,1 ;  buzzer is output
+		SBI PORTB,1 ;  buzzer is off 
+		SBI DDRC,2 ;  PC2 is output
+		CBI PORTC,2 ;  LED is ON 
+
+		rjmp main
+
+
+main:
+LDI R16,0x09
+loop1:
+NOP	
+
+LDI R17,0x09
+loop2:
+NOP
+NOP
+			   				
+LDI R18,0x09
+loop3:
+NOP
+
+
+DEC R18
+brne loop3
+						
+DEC R17
+brne loop2     ;branch if not equal
+						
+DEC R16
+brne loop1        ;branch if not equal
+SBI PINB,1
+rjmp main
+
+;try not jumping to main
+

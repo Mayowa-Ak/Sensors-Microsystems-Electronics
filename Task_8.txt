@@ -1,0 +1,60 @@
+;Show an arbitrary, static pattern on the display
+
+.include "m328pdef.inc"
+
+
+.CSEG
+.ORG 0x0000
+rjmp init
+
+init:
+	
+	LDI r17, 0b00111000;  PB3,4,5 as output
+	LDI r16, 0b11000111 ; Set them as LOW
+	OUT PORTB, r16
+	OUT DDRB, r17
+;Why port before ddr
+
+	RJMP main
+
+main:
+	
+	LDI r18,80  ; 80 columns loop
+	  ; PB3 is HIGH ;Data
+	
+
+	loopCol :
+		
+		SBI PORTB,3
+		SBI PINB,5 ;PB5 is HIGH ; clk ; rising edge
+		SBI PINB,5 ;PB5 is LOW
+		DEC r18
+		BRNE loopCol
+		NOP
+		NOP
+		NOP
+
+	;SBI PORTB,3
+	LDI r18, 8  ; 8 rows loop
+	loopRow :
+		SBI PORTB,3
+		SBI PINB,5 ;PB5 is HIGH
+		SBI PINB,5 ;PB5 is LOW
+		DEC r18
+		BRNE loopRow
+
+	NOP
+	NOP
+	NOP
+	NOP
+	SBI PINB,4 ; PB4 HIGH ;Data latch enable
+
+ 
+	LDI R17,5
+	MyLoop: 
+		
+		DEC R17 
+		BRNE MyLoop
+	SBI PINB,4 ; PB4 LOW   ;enable output
+
+	RJMP main

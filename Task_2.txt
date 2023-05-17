@@ -1,0 +1,39 @@
+;Turn on the lower LED when the SWITCH is HIGH
+; Task2.asm
+
+
+; Load addresses of (I/O) registers
+.include "m328pdef.inc"
+
+
+; Boot code, microcrontroller starts at address 0x0000
+.org 0x0000
+	rjmp init
+
+
+init:
+;Configure input pin PB0
+CBI DDRB, 0 ; PB0 input
+SBI PORTB,0 ;  Pull up resistor
+
+;Configure output pin PC3
+SBI DDRC,3 ; PC3 output
+SBI PORTC,3 ; Set LED off
+
+rjmp main
+
+
+main:
+IN R0,PINB  ; Get value of PINB
+BST R0,0   ; Copy PB0 (bit 0 of PINB) to the T flag
+		
+BRTC SWL   ; Branch if the T flag is cleared
+	
+
+SWH:
+	CBI PORTC,3 ; Set LED on
+	rjmp main
+
+SWL:
+	SBI PORTC,3 ; Set LED off
+	rjmp main

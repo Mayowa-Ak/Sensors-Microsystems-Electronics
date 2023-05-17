@@ -1,0 +1,146 @@
+;Show meaningful data on the display (eg Symbol, letters, numbers)
+
+; Load addresses of (I/O) registers
+.INCLUDE "m328pdef.inc"   
+
+;16 blocks
+.EQU BlockTotal = 16
+
+;7 rows
+.EQU LEDrows = 7
+
+;SBI PinB3 and 5 if bit in register is clear
+.MACRO shiftRegister
+	SBI PORTB,3  ;pin B3 is data bit
+	SBRS @0, @1  ;skip next instruction if bit in register is set
+	SBI PINB,3	 ;execute instruction if bit in register is cleared
+	SBI PINB,5   ;pin PB5 is shift clock
+	SBI PINB,5
+.ENDMACRO
+
+
+; Boot code, microcrontroller starts at address 0x0000
+.ORG 0x0000; 
+RJMP init
+
+
+; Timer/counter/interrupt 0
+.ORG 0x0020
+RJMP timerInterrupt_0
+
+
+;initialize
+init:
+
+;Timer overflow counter 0
+;for screen
+LDI R16,0b00000011 ;prescaler 64
+OUT TCCR0B,R16  ;i/o register
+LDI R19,131;  2kHz  131
+OUT TCNT0,R19
+LDI R22, 0b00000001 ;enable interrupt
+STS TIMSK0,R22
+
+
+; cleared screen initialized 
+LDI ZH,high(char5<<1)
+LDI ZL,low(char5<<1)
+
+;data for each row(7 rows total) 
+LDI R17,0b1000000 
+
+LDI R18,LEDrows
+
+;PB3 is data bit
+SBI DDRB, 3 
+CBI PORTB,3		
+
+; PB4 is data copy
+SBI DDRB, 4 
+CBI PORTB, 4
+
+; PB5 is shift clock
+SBI DDRB, 5 
+CBI PORTB,5
+
+RCALL BlockLoop
+
+
+main:
+
+SEI
+LDI ZH,high(char5<<1)
+LDI ZL,low(char5<<1)
+
+RJMP main
+
+
+
+;charTable
+;every byte represents one line of a char
+;first byte shown on row 1
+;8 bytes to display char on a block
+
+char5: 
+	.db 0b11110, 0b10000, 0b10000, 0b11110, 0b00010, 0b00010, 0b11110, 0b00000
+
+
+;LED display interrupt 
+timerInterrupt_0: 
+SEI
+		LDI R19,131
+		OUT TCNT0,R19
+		RCALL BlockLoop
+		 
+
+ RETI  ; return from interrupt
+
+
+BlockLoop:
+		DEC R18     ;6 5 4 3...
+		BRPL Offset   ;Branch if plus
+		LDI R18, 6   ; for the last row I need offset of 6; for the first row no need of offset
+		Offset:
+		ADD ZL,R18   ;add offset to Z
+		LPM R28,Z		;load from program memory ; Z is a pointer to the correct byte in the CharTable ;R28 gets the value where Z is pointing to
+
+
+; 5 columns per block for 16 blocks
+		LDI R21, BlockTotal
+BlockColLoop:  
+			shiftRegister R28, 0
+			shiftRegister R28, 1 
+			shiftRegister R28, 2
+			shiftRegister R28, 3
+			shiftRegister R28, 4
+			DEC R21
+            BRNE BlockColLoop
+			
+			SBI PINB,3
+			SBI PINB,5
+			SBI PINB,5
+			NOP
+			NOP
+; 7 rows
+			shiftRegister R17, 6
+			shiftRegister R17, 5
+			shiftRegister R17, 4
+			shiftRegister R17, 3
+			shiftRegister R17, 2
+			shiftRegister R17, 1  
+			shiftRegister R17, 0
+
+		LSR R17 ;; logical shift right
+		BRNE delay
+		LDI R17, 0b1000000
+
+		delay:
+			SBI PINB, 4   ; data latch
+			NOP
+			NOP
+			NOP
+			NOP
+			NOP
+			NOP
+			SBI PINB, 4 ; output enable
+RET

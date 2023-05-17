@@ -1,0 +1,53 @@
+;Sound the buzzer at a fixed frequency of 440Hz when the joystick is pressed.
+
+; Load addresses of (I/O) registers
+.include "m328pdef.inc"
+
+.ORG 0x0000
+RJMP init
+.ORG 0x0020
+RJMP Timer0_ov
+
+
+init:
+SEI  ; Enable global interrupt
+
+; WGM 02:0 = 0b000
+;Prescaler 1024, CS02:00= 0b101
+
+LDI R19, 0b00000101; TCCR0B is not bit addressable
+OUT TCCR0B, R19
+
+; Configure Output pin
+SBI DDRB, 1 ; PB1 output
+SBI PORTB, 1 ; output buzzer is off
+
+
+; Configure input pin
+CBI DDRB,2  ; PB2 is input
+SBI PORTB, 2 ; Pullup
+
+
+main:
+IN R0, PINB
+BST R0, 2
+BRTC  JoyPressed
+
+
+JoyNotPressed:
+LDI R19, 0b00000000
+STS TIMSK0, R19
+RJMP main
+
+JoyPressed:
+LDI R19, 0b00000001
+STS TIMSK0, R19
+RJMP main
+
+Timer0_ov:
+LDI R16, 238
+OUT TCNT0, R16
+SBI PINB, 1
+RETI; Return from Interrupt
+
+;SEI should go to main

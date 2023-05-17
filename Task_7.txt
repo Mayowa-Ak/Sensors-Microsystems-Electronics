@@ -1,0 +1,204 @@
+;Readout the keyboard: 
+
+;Button 7: Two leds on
+;Button 8: Bottom led on
+;Button 4: Top Led on
+;All other buttons: Buzzer on
+;No buttons pressed: Leds and buzzer off
+
+.include "m328pdef.inc"
+
+.MACRO keyboard
+	
+	LDI R17, 0b00001111; switch row/column row-input column-output
+	LDI R16, 0b11110000
+        OUT PORTD, R16
+	OUT DDRD, R17
+	NOP
+
+	; check for LOW rows
+
+	SBIS PIND,7
+	RJMP @0
+	SBIS PIND,6
+	RJMP @1
+	SBIS PIND,5
+	RJMP @2
+	SBIS PIND,4
+	RJMP @3
+	RJMP reset
+.ENDMACRO
+
+
+.CSEG
+.ORG 0x0000
+rjmp init
+
+.ORG 0x0020
+RJMP Timer0_ov
+
+
+init:
+
+; Output LEDS
+	SBI DDRC,2
+	SBI DDRC,3
+	SBI PORTC,2
+	SBI PORTC,3
+
+; Output buzzer
+	SBI DDRB,1
+	SBI PORTB,1
+
+	; configure timer 0 in normal mode (count clk signals)
+	; WGM 02:0 = 0b000
+
+	;Prescaler 1024, CS02:00= 0b101
+
+	LDI R19, 0b00000101; TCCR0B is not bit addressable
+	OUT TCCR0B, R19
+
+	; activate overflow interrupt timer 0
+	; TOIE0
+	LDI R19, 0b00000001
+	STS TIMSK0, R19
+
+	rjmp main
+
+
+main:
+	; Check if all COL are HIGH
+		; First set all rows to LOW as output and cols as inputs
+		
+		LDI R17, 0b11110000;
+		LDI R16, 0b00001111;
+		OUT PORTD, R16
+                OUT DDRD, R17		  		
+		NOP
+		
+		
+		; check columns 1-4
+
+		SBIS PIND,3
+		RJMP C1Pressed
+		SBIS PIND,2
+		RJMP C2Pressed
+		SBIS PIND,1
+		RJMP C3Pressed
+		SBIS PIND,0
+		RJMP C4Pressed
+		RJMP reset
+
+		reset:
+			SBI PORTC,2
+			SBI PORTC,3
+			CLI
+			RJMP main
+
+		C1Pressed:
+			keyboard C1R1Pressed,C1R2Pressed,C1R3Pressed,C1R4Pressed
+
+		C2Pressed:
+			keyboard C2R1Pressed,C2R2Pressed,C2R3Pressed,C2R4Pressed
+
+		C3Pressed:
+			keyboard C3R1Pressed,C3R2Pressed,C3R3Pressed,C3R4Pressed
+
+		C4Pressed:
+			keyboard C4R1Pressed,C4R2Pressed,C4R3Pressed,C4R4Pressed
+
+		C1R1Pressed:
+			; 7 pressed -> 2 LEDS on and buzzer off
+			CBI PORTC,2
+			CBI PORTC,3
+			;disable interrupt
+			CLI
+			RJMP main
+
+		C1R2Pressed:
+			; 4 pressed -> LED up ON, LED down OFF, buzzer OFF
+			CBI PORTC,2
+			SBI PORTC,3
+			CLI
+			RJMP main
+
+			
+
+		C1R3Pressed:
+			; 1 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C1R4Pressed:
+			; A pressed -> buzzer
+			SEI
+			RJMP main
+
+		C2R1Pressed:
+			; 8 pressed -> LED up OFF, LED down ON
+			SBI PORTC,2
+			CBI PORTC,3
+			CLI
+			RJMP main
+
+		C2R2Pressed:
+			; 5 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C2R3Pressed:
+			; 2 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C2R4Pressed:
+			; 0 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C3R1Pressed:
+			; 9 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C3R2Pressed:
+			; 6 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C3R3Pressed:
+			; 3 pressed -> buzzer
+			SEI
+			RJMP main
+
+		C3R4Pressed:
+			; B pressed -> buzzer
+			SEI
+			RJMP main
+
+		C4R1Pressed:
+			; F pressed -> buzzer
+			SEI
+			RJMP main
+
+		C4R2Pressed:
+			; E pressed -> buzzer
+			SEI
+			RJMP main
+
+		C4R3Pressed:
+			; D pressed -> buzzer
+			SEI
+			RJMP main
+
+		C4R4Pressed:
+			; C pressed -> buzzer
+			SEI
+			RJMP main
+
+
+Timer0_ov:
+LDI R16, 238
+OUT TCNT0, R16
+SBI PINB, 1
+RETI; Return from Interrupt

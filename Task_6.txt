@@ -1,0 +1,64 @@
+;Sound the buzzer when the joystick is pressed, at a frequency of 440Hz or 880Hz depending on the state of the switch
+; Load addresses of (I/O) registers
+.include "m328pdef.inc"
+
+.ORG 0x0000
+RJMP init
+.ORG 0x0020
+RJMP Timer0_ov
+
+
+init:
+; WGM 02:0 = 0b000
+;Prescaler 1024, CS02:00= 0b101
+
+LDI R19, 0b00000101; TCCR0A is not bit addressable
+OUT TCCR0B, R19
+
+LDI R19,0b00000001
+STS TIMSK0,R19
+
+; Configure Output pin
+SBI DDRB, 1 ; PB1 output
+CBI PORTB, 1 ; output buzzer is ON
+
+; Configure input pin
+CBI DDRB,0  ; PB0 is input
+SBI PORTB, 0 ; Pullup
+
+
+
+main:
+SEI
+; It should be here, I think
+;LDI R19,0b00000001
+;STS TIMSK0,R19
+RJMP main
+
+
+Timer0_ov:
+IN R0, PINB
+BST R0, 0
+BRTS  SWH
+
+
+;440Hz
+SWL:
+LDI R16, 238
+OUT TCNT0, R16
+SBI PINB, 1
+RETI
+
+
+;880Hz
+SWH:
+LDI R16, 247
+OUT TCNT0, R16
+SBI PINB, 1
+RETI; Return from Interrupt
+
+
+;;rewrite task 6
+;init
+;prescalar, toie, tcnt, sei 
+
